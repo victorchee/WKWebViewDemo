@@ -39,7 +39,7 @@ class ViewController: UIViewController {
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if let keyPath = keyPath, keyPath == "estimatedProgress" {
-            progressView.progress = change?["new"] as? Float ?? 0
+            progressView.progress = change?[NSKeyValueChangeKey.newKey] as? Float ?? 0
         }
     }
 }
