@@ -15,7 +15,11 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        let webView = WKWebView(frame: view.bounds)
+        
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController = WKUserContentController()
+        configuration.userContentController.add(self, name: "iOSNative")
+        let webView = WKWebView(frame: view.bounds, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsLinkPreview = true
         webView.navigationDelegate = self;
@@ -31,26 +35,49 @@ class ViewController: UIViewController {
         let verticalConstraints = NSLayoutConstraint.constraints(withVisualFormat: "V:|[topLayoutGuide][webView]|", options: [], metrics: nil, views: views)
         constraints += verticalConstraints
         NSLayoutConstraint.activate(constraints)
-        
-        webView.load(URLRequest(url: URL(string: "https://victorchee.github.io")!))
-        
-        webView.addObserver(self, forKeyPath: "estimatedProgress", options: .new, context: nil)
+
+        let test = Bundle.main.url(forResource: "Test", withExtension: "html")
+        do {
+            let html = try String(contentsOf: test!)
+            webView.loadHTMLString(html, baseURL: nil)
+            
+            webView.addObserver(self, forKeyPath: "estimatedProgress", options: .new, context: nil)
+            webView.addObserver(self, forKeyPath: "title", options: .new, context: nil)
+        } catch {
+            
+        }
     }
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        if let keyPath = keyPath, keyPath == "estimatedProgress" {
-            progressView.progress = change?[NSKeyValueChangeKey.newKey] as? Float ?? 0
+        if let keyPath = keyPath {
+            if keyPath == "estimatedProgress" {
+                progressView.progress = change?[NSKeyValueChangeKey.newKey] as? Float ?? 0
+            } else if keyPath == "title" {
+                self.navigationItem.title = change?[NSKeyValueChangeKey.newKey] as? String ?? ""
+            }
         }
     }
 }
 
 extension ViewController: WKNavigationDelegate {
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if navigationAction.navigationType == .linkActivated {
+            UIApplication.shared.openURL(navigationAction.request.url!)
+            decisionHandler(.cancel)
+        } else {
+            decisionHandler(.allow)
+        }
+    }
+    
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         print("webView did commit navigation : \(navigation)")
     }
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         print("webView did finish navigation: \(navigation)")
+        webView.evaluateJavaScript("show('abc')") { (response, error) in
+            print(response as Any)
+        }
     }
     
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -72,7 +99,24 @@ extension ViewController: WKUIDelegate {
         return webView
     }
     
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        let alert = UIAlertController(title: "Alert", message: "JS call alert", preferredStyle: .alert)
+        let action = UIAlertAction(title: "Confirm", style: .default) { (action) in
+            completionHandler()
+        }
+        alert.addAction(action)
+        self.present(alert, animated: true, completion: nil)
+    }
+    
     func webViewDidClose(_ webView: WKWebView) {
         print("webView did close")
+    }
+}
+
+extension ViewController: WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "iOSNative" {
+            print(message.body)
+        }
     }
 }
