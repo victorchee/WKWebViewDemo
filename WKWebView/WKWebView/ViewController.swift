@@ -100,7 +100,7 @@ extension ViewController: WKUIDelegate {
     }
     
     func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
-        let alert = UIAlertController(title: "Alert", message: "JS call alert", preferredStyle: .alert)
+        let alert = UIAlertController(title: "Alert", message: message, preferredStyle: .alert)
         let action = UIAlertAction(title: "Confirm", style: .default) { (action) in
             completionHandler()
         }
